@@ -1,36 +1,62 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from "mongoose";
 import morgan from 'morgan';
+import {v2 as cloudinary} from 'cloudinary';
 
 dotenv.config();
 
-//importamos las rutas de usuarios 
 import userRoutes from './routes/userRoutes.js';
 
+//Importamos las rutas para el restaurante 
+import restauranteRoutes from './routes/restauranteRoutes.js';
+
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
+const apikey = process.env.CLOUDINARY_API_KEY || "";
+const apiSecret = process.env.CLOUDINARY_API_SECRET || "";
+cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apikey,
+    api_secret: apiSecret
+});
+
+
 mongoose.connect(process.env.DB_CONNECTION_STRING as string)
-.then( ()=>{
+.then(() => {
     console.log("Base de datos conectada");
 })
-.catch(()=>{
+.catch(() => {
     console.log("Error al conectarse a la base de datos");
 });
-const app =express();
+
+const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || "https://localhost:5173",
+    credentials: true
+}));
 app.use(morgan('dev'));
 
-//Riuta para verificar qie el servidor se esta ejecutado 
 app.get('/health', async (req: Request, res: Response) => {
-    res.send({message:'!servidor OK!'});
+    res.send({ message: '!servidor OK!' });
 });
 app.get('/', async (req: Request, res: Response) => {
     res.redirect('/health');
-})
+});
+
 app.use("/api/user", userRoutes);
-const port= process.env.PORT || 3000;
-app.listen(port, ()=>{
-    console.log("Servidor corriendo en el puerto: " + port)
+app.use('/api/restaurante', restauranteRoutes);
+
+// Manejador global de errores - devuelve JSON en lugar de HTML
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Error interno del servidor";
+    res.status(status).json({ message });
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log("Servidor corriendo en el puerto: " + port);
 });
