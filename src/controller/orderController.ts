@@ -34,7 +34,7 @@ const lineItems = checkOutSessionRequest.cartItems.map((cartItem)=>{
     const lineItem={
         price_data:{
             currency:"mxn",
-            unit_amount:parseFloat(menuItem.price)*10,
+            unit_amount:Math.round(parseFloat(menuItem.price)*10),
             product_data:{
                 name:cartItem.name,
             }
@@ -125,7 +125,7 @@ export const createCheckOutSession = async (req:Request, res:Response):Promise<a
                     STRIPE_WEBHOOK_SECRET
                 );
             }catch(error:any){
-                return res.status(400).send('Webhook error: ${error.message}');
+                return res.status(400).send(`Webhook error: ${error.message}`);
             }
             if(event.type==="checkout.session.completed"){
                 const order=await Order.findById(event.data.object.metadata?.orderId);
