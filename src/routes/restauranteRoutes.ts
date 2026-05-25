@@ -1,6 +1,6 @@
 import espress from "express";
 import multer from 'multer';
-import { createRestaurnate, getRestaurante, searchRestaurante, updateRestaurante } from "../controller/restauranteController.js";
+import { createRestaurnate, getRestaurante, searchRestaurante, updateRestaurante, getRestauranteById} from "../controller/restauranteController.js";
 import { jwtCheck, jwtParse } from "../middleware/auth.js";
 import { validateResturanteRequest } from "../middleware/validation.js";
 import { param } from "express-validator";
@@ -38,5 +38,9 @@ router.get('/search/:city',
     .withMessage("El parametro ciudad debe serr un string valido"),
     searchRestaurante
 )
-
+//Ruta para obtener un retaurante por Id
+router.get("/:restaurantId", param("restaurantId").isString()
+.trim().notEmpty().withMessage("El parametro Id del Restaurante debeser un string valido"),
+getRestauranteById
+);//fin de obtener restaurante por id
 export default router;

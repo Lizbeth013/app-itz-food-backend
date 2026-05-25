@@ -13,6 +13,9 @@ import userRoutes from './routes/userRoutes.js';
 //Importamos las rutas para el restaurante 
 import restauranteRoutes from './routes/restauranteRoutes.js';
 
+//Importamos la ruta para ordenes
+import orderRoutes from './routes/orderRoutes.js';
+
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
 const apikey = process.env.CLOUDINARY_API_KEY || "";
 const apiSecret = process.env.CLOUDINARY_API_SECRET || "";
@@ -32,13 +35,14 @@ mongoose.connect(process.env.DB_CONNECTION_STRING as string)
 });
 
 const app = express();
+app.use('/api/order/checkout/webhook', express.raw({type:"*/*"}))
+
 app.use(express.json());
 app.use(cors({
     origin: process.env.FRONTEND_URL || "https://localhost:5173",
     credentials: true
 }));
 app.use(morgan('dev'));
-
 app.get('/health', async (req: Request, res: Response) => {
     res.send({ message: '!servidor OK!' });
 });
@@ -48,6 +52,7 @@ app.get('/', async (req: Request, res: Response) => {
 
 app.use("/api/user", userRoutes);
 app.use('/api/restaurante', restauranteRoutes);
+app.use('/api/order', orderRoutes);
 
 // Manejador global de errores - devuelve JSON en lugar de HTML
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

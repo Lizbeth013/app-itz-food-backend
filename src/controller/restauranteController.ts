@@ -2,6 +2,7 @@ import {Request, Response} from 'express';
 import Restaurant from "../model/restaurantModel.js";
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
+import restaurantModel from '../model/restaurantModel.js';
 //Funcion para obtener los datos de un restaurante
 export const getRestaurante =async (req:Request, res:Response)=>{
     try{
@@ -161,3 +162,20 @@ export const searchRestaurante = async(req:Request, res:Response):Promise<any>=>
         res.status(500).json({message: 'Error al buscar el restaurante'})
     }
 }//Fin del searchRestaurante
+
+//Función oara obtener los datos de un restaurante 
+export const getRestauranteById = async (req: Request, res: Response):Promise<any>=>{
+    try{
+        const restaurante = await restaurantModel.findById(req.params.restaurantId);
+        if(!restaurante){
+            return res.status(404).json({message:"Restaurante no encontrado"})
+
+
+        }
+        res.json(restaurante);
+
+    }catch(error){
+        console.log(error);
+    res.status(500).json({message: 'Error al obtener los datos del restaurante'})
+}
+}
