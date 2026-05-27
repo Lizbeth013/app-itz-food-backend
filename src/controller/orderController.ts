@@ -2,6 +2,7 @@ import { Request, Response} from "express";
 import Stripe from 'stripe';
 import Restaurante, {MenuItemType} from '../model/restaurantModel.js';
 import Order from '../model/orderModels.js';
+import { console } from "inspector";
 
 const STRIPE = new Stripe(process.env.STRIPE_API_KEY as string);
 const FRONTEND_URL = process.env.FRONTEND_URL as string;
@@ -29,12 +30,14 @@ const createLineItems=(checkOutSessionRequest:CheckOutSessionRequest, menuItems:
 const lineItems = checkOutSessionRequest.cartItems.map((cartItem)=>{
     const menuItem = menuItems.find((item)=>item._id.toString()===cartItem.menuItemId.toString());
     if(!menuItem){
+        console.log("cartItem.menuItemId:", cartItem.menuItemId);
+        console.log("menuItems ids:", menuItems.map(i=>i._id.toString()));
         throw new Error("Menu Item no encontrado" + cartItem.name)
     }
     const lineItem={
         price_data:{
             currency:"mxn",
-            unit_amount:Math.round(parseFloat(menuItem.price)*10),
+            unit_amount: parseFloat(menuItem.price)*100,
             product_data:{
                 name:cartItem.name,
             }
@@ -59,7 +62,7 @@ const createStripeSession=async(
                 display_name:"Delivery",
                 type:"fixed_amount",
                 fixed_amount:{
-                    amount:  deliveryPrice,
+                    amount: deliveryPrice,
                 currency:"mxn"
             }
         }
@@ -83,13 +86,13 @@ export const createCheckOutSession = async (req:Request, res:Response):Promise<a
             throw new Error("Restaurante no encontrado");
 
         const newOrder = new Order({
-            restaurantId:checkOutSessionRequest.restaurantId,
+            restaurant:checkOutSessionRequest.restaurantId,
             userId:req.userId,
             deliveryDetails:checkOutSessionRequest.deliveryDetails,
             cartItems:checkOutSessionRequest.cartItems,
             totalAmount: 0 ,
             status:"placed",
-            createAt:new Date(),
+            createdAt:new Date(),
         });
         const lineItems=createLineItems(
             checkOutSessionRequest,
@@ -112,6 +115,7 @@ export const createCheckOutSession = async (req:Request, res:Response):Promise<a
         res.json({url:session.url});
 
     }catch (error:any){
+        console.error("Stripe checkout error:", error);
         res.status(500).json({message: error?.raw?.message || error?.message || "Error interno"})
     }
 }
@@ -137,4 +141,59 @@ export const createCheckOutSession = async (req:Request, res:Response):Promise<a
             }
             res.status(200).send();
         }
-    
+    //Funcion para obtener las ordenes de un usuario
+    export const getOrders = async (req:Request, res:Response):Promise<any>=>{
+        try{
+            const orders = await Order.find({userId:req.userId})
+            .populate('restaurant')
+            res.json(orders);
+        }catch(error){
+            console.log(error);
+            res.status(500).json({message:"Error al obtener las ordenes"});
+        }
+        }
+
+        //Funcion para obteenr las ordeness de un restuante 
+        export const getRestaurantOrders = async (req:Request, res:Response):Promise<any>=>{
+            try{
+                const restaurant=await Restaurante.findOne({user:req.userId})
+                if(!restaurant){
+                    return res.status(400).json({message: 'Restaurante no encontrado'})
+
+                }
+                const orders = await Order.find({restaurant:restaurant._id})
+                .populate('restaurant')
+                .populate("user");
+
+                res.json(orders);
+
+            }catch(error){
+                console.log(error);
+                res.status(500).json({message: 'Error al obtener para un restaurante'})
+            }
+
+        
+        }
+export const updateOrderStatus = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { orderId } = req.params;
+        const { status } = req.body;
+
+        const order = await Order.findById(orderId);
+        if (!order) 
+            return res.status(404).json({ message: 'Orden no encontrada' });
+        
+        const restaurant = await Restaurante.findById(order.restaurant._id);
+        if (restaurant?.user?._id.toString() !== req.userId) {
+            return res.status(401).json({ message: 'El restaurante no corresponde al especificado en la orden' });
+        }
+
+        order.status = status;
+        await order.save();
+
+        res.status(200).json(order);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Error al actualizar el status de una orden' });
+    }
+}

@@ -1,10 +1,9 @@
-import mongoose from "mongoose";
-import { count } from "node:console";
-import { create } from "node:domain";
+import mongoose , {Schema} from "mongoose";
+
 
 const orderSchema = new mongoose.Schema({
-    restaurantId:{type:String, required:true},
-    userId:{type:String, required:true},
+    restaurant:{type: Schema.Types.ObjectId,ref:'Restaurant', required:true},
+    userId:{type: Schema.Types.ObjectId,ref:'User', required:true},
     deliveryDetails:{
         email:{type:String, required:true},
         name:{type:String, required:true},
@@ -24,7 +23,7 @@ const orderSchema = new mongoose.Schema({
         enum:["placed","paid","inProgress","outForDelivery","delivered"],
        
     },
-    createAt:{
+    createdAt:{
         type:Date,
         default:Date.now}
 })
